@@ -1,4 +1,4 @@
--- AimbotByPatrul v3.0 - Fixed Sline + Player List Whitelist + Smooth Headlock
+-- AimbotByPatrul v3.1 - Full Fixed
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
@@ -12,9 +12,10 @@ local Settings = {
     LockPart = "Torso",
     SlineEnabled = false,
     MaxDistance = 500,
-    LockSmoothing = 0.08,   -- torso: lebih ketat
-    HeadSmoothing = 0.04,   -- head: smooth seperti free fire
-    HeadOffset = 0.5,       -- offset agar tidak nempel banget (0=nempel, 1=jauh)
+    LockSmoothing = 0.08,
+    HeadSmoothing = 0.015,
+    HeadOffset = 2.5,
+    FOVRadius = 80,
     TeamCheck = false,
 }
 
@@ -39,9 +40,8 @@ if not ScreenGui.Parent then
 end
 
 -- =====================
---   SLINE CANVAS (FIXED)
+--   SLINE CANVAS
 -- =====================
--- Pakai SurfaceGui trick: Frame penuh layar utk drawing
 local SlineFrame = Instance.new("Frame")
 SlineFrame.Name = "SlineFrame"
 SlineFrame.Size = UDim2.new(1, 0, 1, 0)
@@ -56,8 +56,8 @@ SlineFrame.Parent = ScreenGui
 --      MAIN FRAME
 -- =====================
 local Frame = Instance.new("Frame")
-Frame.Size = UDim2.new(0, 210, 0, 300)
-Frame.Position = UDim2.new(0, 20, 0.5, -150)
+Frame.Size = UDim2.new(0, 210, 0, 330)
+Frame.Position = UDim2.new(0, 20, 0.5, -165)
 Frame.BackgroundColor3 = Color3.fromRGB(13, 13, 13)
 Frame.BorderSizePixel = 0
 Frame.Active = true
@@ -69,205 +69,200 @@ local MS = Instance.new("UIStroke", Frame)
 MS.Color = Color3.fromRGB(50, 50, 50)
 MS.Thickness = 1
 
--- Title
-local TitleBar = Instance.new("Frame")
+-- Title Bar
+local TitleBar = Instance.new("Frame", Frame)
 TitleBar.Size = UDim2.new(1, 0, 0, 38)
 TitleBar.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
 TitleBar.BorderSizePixel = 0
 TitleBar.ZIndex = 21
-TitleBar.Parent = Frame
-local TBC = Instance.new("UICorner", TitleBar)
-TBC.CornerRadius = UDim.new(0, 10)
+Instance.new("UICorner", TitleBar).CornerRadius = UDim.new(0, 10)
+
 local TBFix = Instance.new("Frame", TitleBar)
-TBFix.Size = UDim2.new(1,0,0.5,0)
-TBFix.Position = UDim2.new(0,0,0.5,0)
-TBFix.BackgroundColor3 = Color3.fromRGB(20,20,20)
+TBFix.Size = UDim2.new(1, 0, 0.5, 0)
+TBFix.Position = UDim2.new(0, 0, 0.5, 0)
+TBFix.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
 TBFix.BorderSizePixel = 0
 TBFix.ZIndex = 21
 
 local TLabel = Instance.new("TextLabel", TitleBar)
-TLabel.Size = UDim2.new(1,0,1,0)
+TLabel.Size = UDim2.new(1, 0, 1, 0)
 TLabel.BackgroundTransparency = 1
-TLabel.Text = "🎯 AimbotByPatrul v3"
-TLabel.TextColor3 = Color3.fromRGB(255,255,255)
+TLabel.Text = "🎯 AimbotByPatrul v3.1"
+TLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 TLabel.TextSize = 13
 TLabel.Font = Enum.Font.GothamBold
 TLabel.ZIndex = 22
 
 local function makeDivider(yPos)
     local d = Instance.new("Frame", Frame)
-    d.Size = UDim2.new(1,-20,0,1)
-    d.Position = UDim2.new(0,10,0,yPos)
-    d.BackgroundColor3 = Color3.fromRGB(40,40,40)
+    d.Size = UDim2.new(1, -20, 0, 1)
+    d.Position = UDim2.new(0, 10, 0, yPos)
+    d.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
     d.BorderSizePixel = 0
     d.ZIndex = 21
 end
 
 makeDivider(38)
 
--- Fungsi buat tombol toggle
 local function makeToggleBtn(yPos, icon, label)
     local Btn = Instance.new("TextButton", Frame)
-    Btn.Size = UDim2.new(1,-20,0,32)
-    Btn.Position = UDim2.new(0,10,0,yPos)
-    Btn.BackgroundColor3 = Color3.fromRGB(25,25,25)
+    Btn.Size = UDim2.new(1, -20, 0, 32)
+    Btn.Position = UDim2.new(0, 10, 0, yPos)
+    Btn.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
     Btn.BorderSizePixel = 0
     Btn.TextXAlignment = Enum.TextXAlignment.Left
-    Btn.Text = "  "..icon.." "..label
-    Btn.TextColor3 = Color3.fromRGB(160,160,160)
+    Btn.Text = "  " .. icon .. " " .. label
+    Btn.TextColor3 = Color3.fromRGB(160, 160, 160)
     Btn.TextSize = 12
     Btn.Font = Enum.Font.GothamSemibold
     Btn.ZIndex = 21
-    Instance.new("UICorner", Btn).CornerRadius = UDim.new(0,6)
+    Instance.new("UICorner", Btn).CornerRadius = UDim.new(0, 6)
 
-    local StatusDot = Instance.new("Frame", Btn)
-    StatusDot.Size = UDim2.new(0,8,0,8)
-    StatusDot.Position = UDim2.new(1,-16,0.5,-4)
-    StatusDot.BackgroundColor3 = Color3.fromRGB(80,80,80)
-    StatusDot.BorderSizePixel = 0
-    StatusDot.ZIndex = 22
-    Instance.new("UICorner", StatusDot).CornerRadius = UDim.new(1,0)
+    local Dot = Instance.new("Frame", Btn)
+    Dot.Size = UDim2.new(0, 8, 0, 8)
+    Dot.Position = UDim2.new(1, -16, 0.5, -4)
+    Dot.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
+    Dot.BorderSizePixel = 0
+    Dot.ZIndex = 22
+    Instance.new("UICorner", Dot).CornerRadius = UDim.new(1, 0)
 
-    return Btn, StatusDot
+    return Btn, Dot
 end
 
-local TorsoBtn, TorsoDot = makeToggleBtn(48, "🎯", "Lock Torso")
-local HeadBtn,  HeadDot  = makeToggleBtn(88, "💀", "Lock Head")
+local TorsoBtn, TorsoDot = makeToggleBtn(48,  "🎯", "Lock Torso")
+local HeadBtn,  HeadDot  = makeToggleBtn(88,  "💀", "Lock Head")
 local SlineBtn, SlineDot = makeToggleBtn(128, "📡", "Sline ESP")
 
 makeDivider(170)
 
--- =====================
---   WHITELIST SECTION
--- =====================
+-- Whitelist Label
 local WLLabel = Instance.new("TextLabel", Frame)
-WLLabel.Size = UDim2.new(1,-20,0,18)
-WLLabel.Position = UDim2.new(0,10,0,176)
+WLLabel.Size = UDim2.new(1, -20, 0, 18)
+WLLabel.Position = UDim2.new(0, 10, 0, 176)
 WLLabel.BackgroundTransparency = 1
 WLLabel.Text = "🛡️ Whitelist Players"
-WLLabel.TextColor3 = Color3.fromRGB(200,200,200)
+WLLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
 WLLabel.TextXAlignment = Enum.TextXAlignment.Left
 WLLabel.TextSize = 11
 WLLabel.Font = Enum.Font.GothamBold
 WLLabel.ZIndex = 21
 
--- Scroll frame untuk list player
+-- Scroll Frame player list
 local ScrollFrame = Instance.new("ScrollingFrame", Frame)
-ScrollFrame.Size = UDim2.new(1,-20,0,90)
-ScrollFrame.Position = UDim2.new(0,10,0,198)
-ScrollFrame.BackgroundColor3 = Color3.fromRGB(20,20,20)
+ScrollFrame.Size = UDim2.new(1, -20, 0, 100)
+ScrollFrame.Position = UDim2.new(0, 10, 0, 198)
+ScrollFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
 ScrollFrame.BorderSizePixel = 0
 ScrollFrame.ScrollBarThickness = 3
-ScrollFrame.ScrollBarImageColor3 = Color3.fromRGB(80,80,80)
+ScrollFrame.ScrollBarImageColor3 = Color3.fromRGB(80, 80, 80)
 ScrollFrame.ZIndex = 21
-Instance.new("UICorner", ScrollFrame).CornerRadius = UDim.new(0,6)
+ScrollFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
+Instance.new("UICorner", ScrollFrame).CornerRadius = UDim.new(0, 6)
 
 local UIList = Instance.new("UIListLayout", ScrollFrame)
 UIList.SortOrder = Enum.SortOrder.Name
-UIList.Padding = UDim.new(0,2)
+UIList.Padding = UDim.new(0, 2)
 
--- Info target di bawah
-makeDivider(295)
+local UIPad = Instance.new("UIPadding", ScrollFrame)
+UIPad.PaddingLeft = UDim.new(0, 4)
+UIPad.PaddingTop = UDim.new(0, 4)
+UIPad.PaddingRight = UDim.new(0, 4)
+
+makeDivider(308)
+
+-- Info target label
 local InfoLabel = Instance.new("TextLabel", Frame)
-InfoLabel.Size = UDim2.new(1,-20,0,18)
-InfoLabel.Position = UDim2.new(0,10,0,300)
+InfoLabel.Size = UDim2.new(1, -20, 0, 18)
+InfoLabel.Position = UDim2.new(0, 10, 0, 312)
 InfoLabel.BackgroundTransparency = 1
 InfoLabel.Text = "Target: -"
-InfoLabel.TextColor3 = Color3.fromRGB(100,100,100)
+InfoLabel.TextColor3 = Color3.fromRGB(100, 100, 100)
 InfoLabel.TextXAlignment = Enum.TextXAlignment.Left
 InfoLabel.TextSize = 10
 InfoLabel.Font = Enum.Font.Gotham
 InfoLabel.ZIndex = 21
 
--- Resize frame untuk info label
-Frame.Size = UDim2.new(0,210,0,325)
-
 -- =====================
---   FUNGSI PLAYER LIST
+--   PLAYER LIST UPDATE
 -- =====================
-local PlayerButtons = {}
-
 local function updatePlayerList()
-    -- Bersihkan list lama
     for _, child in pairs(ScrollFrame:GetChildren()) do
         if child:IsA("TextButton") then child:Destroy() end
     end
-    PlayerButtons = {}
 
     local allPlayers = Players:GetPlayers()
-    local contentSize = 0
+    local count = 0
 
     for _, player in ipairs(allPlayers) do
         if player == LocalPlayer then continue end
 
         local isWL = Whitelist[player.Name] == true
+
         local Btn = Instance.new("TextButton", ScrollFrame)
-        Btn.Size = UDim2.new(1,-6,0,24)
+        Btn.Size = UDim2.new(1, -4, 0, 26)
         Btn.BackgroundColor3 = isWL
-            and Color3.fromRGB(30,60,30)
-            or  Color3.fromRGB(28,28,28)
+            and Color3.fromRGB(25, 55, 25)
+            or  Color3.fromRGB(28, 28, 28)
         Btn.BorderSizePixel = 0
         Btn.TextXAlignment = Enum.TextXAlignment.Left
         Btn.Text = (isWL and "  🛡️ " or "  👤 ") .. player.Name
         Btn.TextColor3 = isWL
-            and Color3.fromRGB(100,220,100)
-            or  Color3.fromRGB(180,180,180)
+            and Color3.fromRGB(80, 220, 80)
+            or  Color3.fromRGB(180, 180, 180)
         Btn.TextSize = 11
         Btn.Font = Enum.Font.Gotham
         Btn.ZIndex = 22
-        Instance.new("UICorner", Btn).CornerRadius = UDim.new(0,4)
+        Instance.new("UICorner", Btn).CornerRadius = UDim.new(0, 4)
 
         Btn.MouseButton1Click:Connect(function()
             if Whitelist[player.Name] then
                 Whitelist[player.Name] = nil
             else
                 Whitelist[player.Name] = true
-                -- Batalkan lock kalau target di-whitelist
                 if LockedTarget and LockedTarget.Name == player.Name then
                     LockedTarget = nil
                     Settings.LockEnabled = false
+                    InfoLabel.Text = "Target: -"
                 end
             end
             updatePlayerList()
         end)
 
-        PlayerButtons[player.Name] = Btn
-        contentSize = contentSize + 26
+        count = count + 1
     end
 
-    ScrollFrame.CanvasSize = UDim2.new(0,0,0,contentSize)
+    ScrollFrame.CanvasSize = UDim2.new(0, 0, 0, count * 28 + 8)
 end
 
--- Auto update list saat player join/leave
-Players.PlayerAdded:Connect(function() updatePlayerList() end)
-Players.PlayerRemoving:Connect(function() updatePlayerList() end)
+Players.PlayerAdded:Connect(updatePlayerList)
+Players.PlayerRemoving:Connect(updatePlayerList)
 updatePlayerList()
 
 -- =====================
---    UPDATE TOMBOL GUI
+--    UPDATE TOMBOL
 -- =====================
 local function setBtn(btn, dot, on, icon, label)
     if on then
-        btn.Text = "  "..icon.." "..label.."  ✓"
-        btn.TextColor3 = Color3.fromRGB(255,255,255)
-        btn.BackgroundColor3 = Color3.fromRGB(18,18,18)
-        dot.BackgroundColor3 = Color3.fromRGB(80,220,80)
+        btn.Text = "  " .. icon .. " " .. label .. "  ✓"
+        btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+        btn.BackgroundColor3 = Color3.fromRGB(18, 18, 18)
+        dot.BackgroundColor3 = Color3.fromRGB(80, 220, 80)
     else
-        btn.Text = "  "..icon.." "..label
-        btn.TextColor3 = Color3.fromRGB(160,160,160)
-        btn.BackgroundColor3 = Color3.fromRGB(25,25,25)
-        dot.BackgroundColor3 = Color3.fromRGB(80,80,80)
+        btn.Text = "  " .. icon .. " " .. label
+        btn.TextColor3 = Color3.fromRGB(160, 160, 160)
+        btn.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+        dot.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
     end
 end
 
 local function updateGUI()
-    setBtn(TorsoBtn, TorsoDot, Settings.LockEnabled and Settings.LockPart=="Torso", "🎯", "Lock Torso")
-    setBtn(HeadBtn,  HeadDot,  Settings.LockEnabled and Settings.LockPart=="Head",  "💀", "Lock Head")
+    setBtn(TorsoBtn, TorsoDot, Settings.LockEnabled and Settings.LockPart == "Torso", "🎯", "Lock Torso")
+    setBtn(HeadBtn,  HeadDot,  Settings.LockEnabled and Settings.LockPart == "Head",  "💀", "Lock Head")
     setBtn(SlineBtn, SlineDot, Settings.SlineEnabled, "📡", "Sline ESP")
 end
 
 -- =====================
---    SLINE ESP (FIXED)
+--    SLINE ESP
 -- =====================
 local LinePool = {}
 
@@ -284,13 +279,12 @@ local function getLine()
             return f
         end
     end
-    -- Buat line baru kalau pool habis
     local f = Instance.new("Frame", SlineFrame)
-    f.BackgroundColor3 = Color3.fromRGB(255,60,60)
+    f.BackgroundColor3 = Color3.fromRGB(255, 60, 60)
     f.BorderSizePixel = 0
     f.AnchorPoint = Vector2.new(0.5, 0.5)
     f.ZIndex = 6
-    Instance.new("UICorner", f).CornerRadius = UDim.new(1,0)
+    Instance.new("UICorner", f).CornerRadius = UDim.new(1, 0)
     table.insert(LinePool, f)
     return f
 end
@@ -299,13 +293,13 @@ local function drawLine(x1, y1, x2, y2, color, thick)
     thick = thick or 2
     local dx = x2 - x1
     local dy = y2 - y1
-    local len = math.sqrt(dx*dx + dy*dy)
+    local len = math.sqrt(dx * dx + dy * dy)
     if len < 1 then return end
 
     local line = getLine()
     line.BackgroundColor3 = color
     line.Size = UDim2.new(0, len, 0, thick)
-    line.Position = UDim2.new(0, (x1+x2)/2, 0, (y1+y2)/2)
+    line.Position = UDim2.new(0, (x1 + x2) / 2, 0, (y1 + y2) / 2)
     line.Rotation = math.deg(math.atan2(dy, dx))
 end
 
@@ -320,7 +314,7 @@ local function updateSlines()
 
     local vp = Camera.ViewportSize
     local sx = vp.X / 2
-    local sy = vp.Y -- dari bawah tengah layar
+    local sy = vp.Y
 
     for _, player in ipairs(Players:GetPlayers()) do
         if player == LocalPlayer then continue end
@@ -336,8 +330,7 @@ local function updateSlines()
             or char:FindFirstChild("Torso")
         if not root then continue end
 
-        local dist = (root.Position - myRoot.Position).Magnitude
-        if dist > Settings.MaxDistance then continue end
+        if (root.Position - myRoot.Position).Magnitude > Settings.MaxDistance then continue end
 
         local sp, onScreen = Camera:WorldToScreenPoint(root.Position)
         if not onScreen then continue end
@@ -398,7 +391,7 @@ local function getNearestTarget()
         local sp, onScreen = Camera:WorldToScreenPoint(part.Position)
         if not onScreen then continue end
 
-        local sc = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)
+        local sc = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
         local sd = (Vector2.new(sp.X, sp.Y) - sc).Magnitude
 
         if sd < bestDist then
@@ -410,8 +403,7 @@ local function getNearestTarget()
 end
 
 -- =====================
---    SMOOTH HEAD LOCK
---    (style Free Fire)
+--    LOCK TO TARGET
 -- =====================
 local function lockToTarget()
     if not LockedTarget then return end
@@ -426,28 +418,39 @@ local function lockToTarget()
     local part = getLockPart(LockedTarget)
     if not part then return end
 
-    local myRoot = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+    local myRoot = LocalPlayer.Character
+        and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
     if myRoot then
         local dist = math.floor((part.Position - myRoot.Position).Magnitude)
-        InfoLabel.Text = "🎯 "..LockedTarget.Name.." | "..dist.." studs"
+        InfoLabel.Text = "🎯 " .. LockedTarget.Name .. " | " .. dist .. " studs"
     end
 
     local targetPos = part.Position
 
-    -- Kalau Head: tambah offset ke atas agar tidak nempel
+    -- Offset kepala agar tidak nempel
     if Settings.LockPart == "Head" then
-        local char = LockedTarget.Character
-        local hum = char and char:FindFirstChildOfClass("Humanoid")
-        local hipHeight = hum and hum.HipHeight or 0
-        -- Offset sedikit di atas kepala (tidak nempel)
         targetPos = targetPos + Vector3.new(0, Settings.HeadOffset, 0)
     end
 
+    -- Cek jarak ke tengah layar
     local currentCFrame = Camera.CFrame
-    local direction = (targetPos - currentCFrame.Position).Unit
-    local targetCFrame = CFrame.lookAt(currentCFrame.Position, currentCFrame.Position + direction)
+    local sp, onScreen = Camera:WorldToScreenPoint(targetPos)
+    if not onScreen then return end
 
-    -- Smoothing berbeda untuk head vs torso
+    local sc = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
+    local screenDist = (Vector2.new(sp.X, sp.Y) - sc).Magnitude
+
+    -- Stop gerak kalau sudah dalam FOV radius (tidak nempel)
+    if Settings.LockPart == "Head" and screenDist <= Settings.FOVRadius then
+        return
+    end
+
+    local direction = (targetPos - currentCFrame.Position).Unit
+    local targetCFrame = CFrame.lookAt(
+        currentCFrame.Position,
+        currentCFrame.Position + direction
+    )
+
     local smooth = Settings.LockPart == "Head"
         and Settings.HeadSmoothing
         or  Settings.LockSmoothing
@@ -486,8 +489,10 @@ end)
 
 UserInputService.InputBegan:Connect(function(input, gpe)
     if gpe then return end
-    if input.KeyCode == Enum.KeyCode.E then doToggle("Torso")
-    elseif input.KeyCode == Enum.KeyCode.R then doToggle("Head")
+    if input.KeyCode == Enum.KeyCode.E then
+        doToggle("Torso")
+    elseif input.KeyCode == Enum.KeyCode.R then
+        doToggle("Head")
     elseif input.KeyCode == Enum.KeyCode.T then
         Settings.SlineEnabled = not Settings.SlineEnabled
         if not Settings.SlineEnabled then clearLines() end
@@ -505,4 +510,4 @@ RunService.RenderStepped:Connect(function()
     updateSlines()
 end)
 
-print("[AimbotByPatrul v3.0] E=Torso | R=Head | T=Sline")
+print("[AimbotByPatrul v3.1] E=Torso | R=Head | T=Sline")
