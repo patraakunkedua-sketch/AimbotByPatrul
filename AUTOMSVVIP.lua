@@ -9,7 +9,6 @@ local TweenService = game:GetService("TweenService")
 local VIM          = game:GetService("VirtualInputManager")
 local UIS          = game:GetService("UserInputService")
 local HttpService  = game:GetService("HttpService")
-local DataStore    = game:GetService("DataStoreService")
 
 local player    = Players.LocalPlayer
 local playerGui = player.PlayerGui
@@ -24,11 +23,25 @@ local ADMIN_WHITELIST = { "PatraStarboy" }
 -- Database key → { id, password, owner, active }
 -- Disimpan di DataStore "JawaHubKeys"
 -- Key format: ID string (6 karakter huruf besar + angka)
-local KEY_STORE_NAME  = "JawaHubKeys_v1"
-local keyStore        = nil
-pcall(function()
-	keyStore = DataStore:GetDataStore(KEY_STORE_NAME)
-end)
+-- ============================================================
+-- KEY DATABASE (EXECUTOR VERSION)
+-- ============================================================
+
+local KEY_DATABASE = {
+
+	["ABCD1234"] = {
+		password = "123456",
+		owner = "PatraStarboy",
+		active = true
+	},
+
+	["JAWA7777"] = {
+		password = "marsh",
+		owner = "Tester",
+		active = true
+	},
+
+}
 
 local function isAdmin(name)
 	for _, v in ipairs(ADMIN_WHITELIST) do
@@ -47,45 +60,61 @@ local function generateID()
 	return id
 end
 
--- Simpan key baru ke DataStore
-local function saveKey(id, password, ownerNote)
-	if not keyStore then return false end
-	local ok = pcall(function()
-		keyStore:SetAsync("KEY_"..id, {
-			id        = id,
-			password  = password,
-			owner     = ownerNote or "unknown",
-			active    = true,
-			createdAt = os.time(),
-		})
-	end)
-	return ok
-end
-
--- Cek key di DataStore
 local function checkKey(id, password)
-	if not keyStore then return false, "DataStore tidak tersedia" end
-	local data, ok = nil, false
-	ok = pcall(function()
-		data = keyStore:GetAsync("KEY_"..id:upper())
-	end)
-	if not ok or not data then return false, "ID tidak ditemukan" end
-	if not data.active then return false, "Key sudah dinonaktifkan" end
-	if data.password ~= password then return false, "Password salah" end
+
+	local data = KEY_DATABASE[id]
+
+	if not data then
+		return false, "ID tidak ditemukan"
+	end
+
+	if not data.active then
+		return false, "Key sudah dinonaktifkan"
+	end
+
+	if data.password ~= password then
+		return false, "Password salah"
+	end
+
 	return true, data.owner
 end
 
--- Nonaktifkan key
+local function checkKey(id, password)
+
+	local data = KEY_DATABASE[id]
+
+	if not data then
+		return false, "ID tidak ditemukan"
+	end
+
+	if not data.active then
+		return false, "Key sudah dinonaktifkan"
+	end
+
+	if data.password ~= password then
+		return false, "Password salah"
+	end
+
+	return true, data.owner
+end
+
 local function revokeKey(id)
-	if not keyStore then return false end
-	local ok = pcall(function()
-		local data = keyStore:GetAsync("KEY_"..id:upper())
-		if data then
-			data.active = false
-			keyStore:SetAsync("KEY_"..id:upper(), data)
-		end
-	end)
-	return ok
+
+	if KEY_DATABASE[id] then
+		KEY_DATABASE[id].active = false
+		return true
+	end
+
+	return false
+end
+
+local function saveKey(id, password, ownerNote)
+	KEY_DATABASE[id] = {
+		password = password,
+		owner = ownerNote or "unknown",
+		active = true
+	}
+	return true
 end
 
 -- ============================================================
